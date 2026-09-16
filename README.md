@@ -1,61 +1,56 @@
-# Android Video Player MVP
+# Player
 
-Flutter Android MVP for the reference video player project.
+Android video player with a reference-inspired folder library, settings pages, and landscape playback controls.
 
-## Implemented MVP Surface
+## Library
 
-- Local video library scanning through `photo_manager`.
-- Runtime media permission flow.
-- Folder chips with media counts.
-- List/grid video browsing.
-- Video search.
-- Thumbnail display when the platform media store provides thumbnails.
-- Fullscreen-style video player screen using `video_player`.
-- Playback overlay with title, play/pause, previous, next, seek bar, current time, duration, lock control, fit/crop toggle, subtitle picker, speed menu, information dialog, and more menu.
-- Resume playback by saving playback position in `shared_preferences`.
-- Playback speed control.
-- Basic SRT/WebVTT subtitle loading through file picker.
-- Basic settings screen for resume playback, background audio flag, fit mode, default speed, clear history, clear thumbnail cache notice, and reset settings.
-- Delete video action through `photo_manager` system media deletion.
-- Android manifest permissions for media reads, internet playback groundwork, and activity PiP support.
+- Local and Me tabs, without the Music/Transfer tabs or top shortcut strip.
+- Only main storage folders appear at the root. Open a folder to browse its immediate subfolders and videos. No synthetic Recent folder.
+- Android MediaStore scanning, runtime media permission requests, search, list/grid layouts, and lazy thumbnails with a bounded cache. Thumbnails sample later scenes instead of frame zero, retry nearly black frames, and use a silent software decoder when Android cannot extract a frame. Two ordinary thumbnails can be extracted concurrently, while software fallbacks use a separate single-worker queue. Generated previews are saved in a bounded disk cache keyed by video modification time, so reopening the app reuses them. Failed cache entries can be retried, and Clear thumbnail cache clears both disk and memory.
 
-## MVP Limits
+## Playback
 
-- Audio track enumeration and native audio track switching are not exposed by Flutter `video_player`; this needs a later Android Media3 platform bridge.
-- Native picture-in-picture entry is declared in the Android manifest but not wired to a platform-channel button yet.
-- Background audio behavior is configured through `VideoPlayerOptions`, but exact behavior depends on Android version and plugin support.
-- File rename is not implemented yet because Android MediaStore rename requires more native/platform-specific handling than the MVP plugin stack exposes cleanly.
-- Network URL playback is in the backlog, not the MVP implementation.
-- Advanced decoder tuning, volume boost, and resume-only-first-file are logged in the spec backlog but not implemented in this MVP pass.
+Playback uses media_kit/libmpv, including software decoding for WMV formats that the previous platform player could not open.
 
-## Project Structure
+- HW: MediaCodec with frame copying (`mediacodec-copy`).
+- HW+: direct MediaCodec rendering (`mediacodec`).
+- SW: software decoding (`no`).
 
-```text
-lib/
-  data/
-    repositories/
-    services/
-  domain/
-    models/
-  ui/
-    core/
-    features/
-      library/
-      player/
-      settings/
-```
+Select a decoder in the player or save a default under Settings > Decoder. Hardware modes fall back to software when the device cannot decode a format. Information shows the selected and active decoder. These labels describe this app's backend settings.
+
+Drag horizontally to seek forward/backward. Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
+
+Settings > Subtitle > Subtitle Folder opens the Android folder picker. The selection persists across launches. Each video automatically loads a same-name SRT directly from that folder (Movie.wmv -> Movie.srt); filename matching also accepts differences in letter case. Missing files leave playback running, and manual subtitle selection still overrides the automatic choice. Clear subtitle folder disables the lookup. Gesture indicators have a transparent background with lightly shadowed text and icons.
+
+Other working actions include queue selection, seek bar, speed, aspect ratio, rotation, mute, loop, shuffle, background audio, sleep timer, night mode, mirror/flip, external subtitles, bookmarks, favourites, and resume position.
+
+Advanced reference features still show availability explanations: equalizer/audio effects, PiP, cutting, sharing, playlists, rename, and several advanced preferences. Background playback is not a persistent Android media service.
+
+## Branding
+
+The generated launcher icon is in `assets/branding/app-logo.png`. Generation details and the exact prompt are in [assets/branding/README.md](assets/branding/README.md). Regenerate Android icon resources with `dart run flutter_launcher_icons`.
 
 ## Verification
 
-Run:
-
-```bash
+```sh
 flutter analyze
 flutter test
-```
-
-Android build requires an Android SDK on the host:
-
-```bash
 flutter build apk --debug
 ```
+
+Tests cover folder hierarchy, loading races, decoder preference persistence, simplified navigation, gesture direction and limits, disposal during media lookup, and reference menu layout in both orientations.
+
+Backend references: [media_kit](https://pub.dev/packages/media_kit), [mpv hardware decoding](https://mpv.io/manual/master/#options-hwdec).
+
+## Playback adjustments
+
+The subtitle icon is outlined until an external subtitle track loads successfully, then becomes solid and names the loaded file in its tooltip. Matching SRTs must have the same base filename as their video.
+
+Audio sync is available from the player toolbar or More menu. It adjusts audio relative to video from -3 to +3 seconds in 0.05-second increments, applies during playback, and remembers the value per video. Negative values make sound earlier; positive values make sound later. Reset returns to zero.
+
+Seek sensitivity is available in the player More menu and Settings > Player > Controls. The 0.25x to 4x slider and +/-0.05x buttons save adjustments immediately. Reset restores 1x. This multiplier affects horizontal drag distance only.
+
+## Library selection
+
+Long-press a folder or video in list or grid view to select it. Tap more entries or Select all, then use the toolbar delete icon. Selected folders include all indexed videos in their subfolders; other files and physical directories are preserved. Android provides the shared-media deletion confirmation without an extra app dialog. Cancelling keeps the remaining selection; only confirmed deletions update the library.
+

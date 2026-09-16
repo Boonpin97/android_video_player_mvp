@@ -9,6 +9,7 @@ class MediaItem {
     required this.height,
     required this.folderName,
     required this.modifiedAt,
+    this.folderId,
     this.thumbnail,
   });
 
@@ -18,6 +19,7 @@ class MediaItem {
   final int width;
   final int height;
   final String folderName;
+  final String? folderId;
   final DateTime? modifiedAt;
   final Uint8List? thumbnail;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'data/repositories/media_repository.dart';
 import 'data/repositories/settings_repository.dart';
@@ -11,6 +12,7 @@ import 'ui/features/settings/view_models/settings_view_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   final preferenceService = PreferenceService();
   await preferenceService.init();
@@ -45,6 +47,7 @@ class VideoPlayerApp extends StatelessWidget {
       title: 'Player MVP',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      themeMode: ThemeMode.light,
       darkTheme: AppTheme.dark(),
       home: HomeShell(
         libraryViewModel: libraryViewModel,

@@ -1,0 +1,9 @@
+﻿flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/branding/app-logo.png
+  adaptive_icon_background: "#167BEF"
+  adaptive_icon_foreground: assets/branding/app-logo.png
+  adaptive_icon_foreground_inset: 12
+  min_sdk_android: 23
+

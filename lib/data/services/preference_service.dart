@@ -35,6 +35,11 @@ class PreferenceService {
     return _preferences.remove(key);
   }
 
+  String? getString(String key) => _preferences.getString(key);
+
+  Future<void> setString(String key, String value) =>
+      _preferences.setString(key, value);
+
   Future<void> clearByPrefix(String prefix) async {
     final keys = _preferences.getKeys().where((key) => key.startsWith(prefix));
     for (final key in keys) {
