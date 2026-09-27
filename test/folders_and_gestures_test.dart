@@ -77,7 +77,7 @@ void main() {
     final forward = gesture(const Offset(100, 100))
       ..update(const Offset(200, 5));
     expect(forward.kind, PlaybackGestureKind.seek);
-    expect(forward.targetPosition, const Duration(seconds: 90));
+    expect(forward.targetPosition.inMilliseconds, 63847);
     forward.update(const Offset(10000, 0));
     expect(forward.targetPosition, const Duration(seconds: 120));
     final back = gesture(const Offset(700, 100))

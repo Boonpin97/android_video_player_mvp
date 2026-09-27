@@ -31,17 +31,23 @@ class PlaybackGestureSession {
     }
   }
 
+  /// Curve steepness for horizontal seeking. Short drags seek finely, and the
+  /// seek distance grows exponentially as the drag gets longer.
+  static const seekCurve = 4.0;
+
   Duration get targetPosition {
-    final span = math.min(duration.inMilliseconds, 120000);
+    // A full-width swipe covers the whole video, bounded to 2–10 minutes.
+    final fullSwipe = duration.inMilliseconds.clamp(120000, 600000);
+    final fraction = travel.dx.abs() / math.max(1, viewport.width);
+    final offset =
+        fullSwipe *
+        (math.exp(seekCurve * fraction) - 1) /
+        (math.exp(seekCurve) - 1) *
+        seekSensitivity.clamp(0.25, 4);
     return Duration(
-      milliseconds:
-          (position.inMilliseconds +
-                  travel.dx /
-                      math.max(1, viewport.width) *
-                      span *
-                      seekSensitivity.clamp(0.25, 4))
-              .round()
-              .clamp(0, duration.inMilliseconds),
+      milliseconds: (position.inMilliseconds + offset * travel.dx.sign)
+          .round()
+          .clamp(0, duration.inMilliseconds),
     );
   }
 

@@ -18,7 +18,7 @@ Playback uses media_kit/libmpv, including software decoding for WMV formats that
 
 Select a decoder in the player or save a default under Settings > Decoder. Hardware modes fall back to software when the device cannot decode a format. Information shows the selected and active decoder. These labels describe this app's backend settings.
 
-Drag horizontally to seek forward/backward. Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
+Drag horizontally to seek forward/backward. Seeking is exponential: short drags nudge by a second or two, and longer drags accelerate (a full-width swipe covers the video length, bounded to 2–10 minutes). Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
 
 Settings > Subtitle > Subtitle Folder opens the Android folder picker. The selection persists across launches. Each video automatically loads a same-name SRT directly from that folder (Movie.wmv -> Movie.srt); filename matching also accepts differences in letter case. Missing files leave playback running, and manual subtitle selection still overrides the automatic choice. Clear subtitle folder disables the lookup. Gesture indicators have a transparent background with lightly shadowed text and icons.
 

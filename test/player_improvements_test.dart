@@ -134,11 +134,33 @@ void main() {
           volume: 0.5,
           seekSensitivity: sensitivity,
         )..update(const Offset(100, 0));
-    expect(gesture(0.5).targetPosition.inSeconds, 306);
-    expect(gesture(1).targetPosition.inSeconds, 312);
-    expect(gesture(4).targetPosition.inSeconds, 348);
+    expect(gesture(0.5).targetPosition.inSeconds, 302);
+    expect(gesture(1).targetPosition.inSeconds, 305);
+    expect(gesture(4).targetPosition.inSeconds, 322);
     final backward = gesture(4)..update(const Offset(-10000, 0));
     expect(backward.targetPosition, Duration.zero);
+  });
+
+  test('horizontal seek accelerates exponentially with drag length', () {
+    Duration offsetFor(double dx) {
+      final session = PlaybackGestureSession(
+        origin: Offset.zero,
+        viewport: const Size(1000, 500),
+        position: const Duration(hours: 1),
+        duration: const Duration(hours: 2),
+        brightness: 0.5,
+        volume: 0.5,
+      )..update(Offset(dx, 0));
+      return session.targetPosition - const Duration(hours: 1);
+    }
+
+    // Short drags seek finely; longer drags grow faster than linearly.
+    expect(offsetFor(50).inSeconds, 2);
+    expect(offsetFor(250).inSeconds, 19);
+    expect(offsetFor(500).inSeconds, 71);
+    expect(offsetFor(1000).inSeconds, 600);
+    expect(offsetFor(500) > offsetFor(250) * 3, isTrue);
+    expect(offsetFor(-250), -offsetFor(250));
   });
 
   test(
