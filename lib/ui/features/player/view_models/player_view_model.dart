@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
@@ -12,6 +13,14 @@ import '../../../../data/repositories/settings_repository.dart';
 import '../../../../domain/models/app_settings.dart';
 import '../../../../domain/models/media_item.dart';
 
+typedef PlaybackControllerFactory =
+    PlaybackController Function(File file, DecoderMode decoderMode);
+
+PlaybackController _openPlaybackController(
+  File file,
+  DecoderMode decoderMode,
+) => PlaybackController.file(file, decoderMode: decoderMode);
+
 class PlayerViewModel extends ChangeNotifier {
   PlayerViewModel({
     required MediaRepository mediaRepository,
@@ -19,9 +28,11 @@ class PlayerViewModel extends ChangeNotifier {
     required AppSettings settings,
     required List<MediaItem> queue,
     required MediaItem initialItem,
+    @visibleForTesting PlaybackControllerFactory? controllerFactory,
   }) : _mediaRepository = mediaRepository,
        _settingsRepository = settingsRepository,
        _settings = settings,
+       _createController = controllerFactory ?? _openPlaybackController,
        _queue = queue.isEmpty ? [initialItem] : queue,
        _currentIndex = max(
          0,
@@ -30,6 +41,7 @@ class PlayerViewModel extends ChangeNotifier {
 
   final MediaRepository _mediaRepository;
   final SettingsRepository _settingsRepository;
+  final PlaybackControllerFactory _createController;
   AppSettings _settings;
   final List<MediaItem> _queue;
   int _currentIndex;
@@ -73,6 +85,11 @@ class PlayerViewModel extends ChangeNotifier {
   bool get hasPrevious => _currentIndex > 0;
   bool get hasNext => _currentIndex < _queue.length - 1;
   bool get isInitialized => controller?.value.isInitialized ?? false;
+  bool get hasReachedEnd {
+    final value = controller?.value;
+    return value != null && _reachedEnd(value);
+  }
+
   PlaybackController? _completedController;
 
   void _notify() {
@@ -84,6 +101,16 @@ class PlayerViewModel extends ChangeNotifier {
     await _loadCurrent();
   }
 
+  // Some Android decoders stop at the end of a file without mpv reporting
+  // completion, so a stopped video inside the final half second of a known
+  // duration also counts as finished.
+  static bool _reachedEnd(PlaybackValue value) =>
+      value.isCompleted ||
+      (value.isInitialized &&
+          !value.isPlaying &&
+          value.duration > Duration.zero &&
+          value.duration - value.position <= const Duration(milliseconds: 500));
+
   void _onVideoChanged() {
     final video = controller;
     if (video == null) return;
@@ -91,7 +118,7 @@ class PlayerViewModel extends ChangeNotifier {
     if (value.hasError) {
       errorMessage = value.errorDescription;
     }
-    if (value.isCompleted && !loop && _completedController != video) {
+    if (_reachedEnd(value) && !loop && _completedController != video) {
       _completedController = video;
       if (hasNext || (shuffle && _queue.length > 1)) {
         unawaited(next());
@@ -120,10 +147,7 @@ class PlayerViewModel extends ChangeNotifier {
       if (file == null) {
         throw StateError('The selected media file is not available.');
       }
-      final video = PlaybackController.file(
-        file,
-        decoderMode: _settingsRepository.decoderMode,
-      );
+      final video = _createController(file, _settingsRepository.decoderMode);
       controller = video;
       await video.initialize();
       if (_disposed) return;

@@ -22,6 +22,8 @@ Drag horizontally to seek forward/backward. Seeking is exponential: short drags 
 
 Settings > Subtitle > Subtitle Folder opens the Android folder picker. The selection persists across launches. Each video automatically loads a same-name SRT directly from that folder (Movie.wmv -> Movie.srt); filename matching also accepts differences in letter case. Missing files leave playback running, and manual subtitle selection still overrides the automatic choice. Clear subtitle folder disables the lookup. Gesture indicators have a transparent background with lightly shadowed text and icons.
 
+When a video finishes, the player automatically continues with the next item of the playing queue; with shuffle a random item is chosen instead. Loop keeps repeating the current video. Ending on the last queue item stays on the final frame, or returns to the list when Settings > Playback > Back to list is enabled. Completion is detected from mpv's end-of-file event, with a fallback for decoders that stop within the last half second without reporting completion.
+
 Other working actions include queue selection, seek bar, speed, aspect ratio, rotation, mute, loop, shuffle, background audio, sleep timer, night mode, mirror/flip, external subtitles, bookmarks, favourites, and resume position.
 
 Advanced reference features still show availability explanations: equalizer/audio effects, PiP, cutting, sharing, playlists, rename, and several advanced preferences. Background playback is not a persistent Android media service.

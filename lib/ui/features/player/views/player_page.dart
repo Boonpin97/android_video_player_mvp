@@ -114,12 +114,10 @@ class _PlayerPageState extends State<PlayerPage> {
         });
       }
     }
-    final value = vm.controller?.value;
     if (!_leaving &&
         settings.option('backToList', false) &&
         !vm.loop &&
-        value != null &&
-        value.isCompleted &&
+        vm.hasReachedEnd &&
         !vm.isLoading) {
       _leaving = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {

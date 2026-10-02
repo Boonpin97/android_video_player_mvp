@@ -36,6 +36,17 @@ class PlaybackValue {
 class PlaybackController extends ValueNotifier<PlaybackValue> {
   PlaybackController.file(this.file, {required this.decoderMode})
     : super(const PlaybackValue()) {
+    _bindStreams();
+  }
+
+  /// Creates a controller without an mpv [Player] so unit tests can drive
+  /// [value] directly. Every method that touches [player] must be overridden.
+  @visibleForTesting
+  PlaybackController.stub(this.file, this.decoderMode)
+    : super(const PlaybackValue());
+
+  void _bindStreams() {
+    _native = true;
     player = Player(configuration: const PlayerConfiguration(title: 'Player'));
     videoController = VideoController(
       player,
@@ -64,6 +75,7 @@ class PlaybackController extends ValueNotifier<PlaybackValue> {
       }),
     );
   }
+
   final File file;
   late final Player player;
   late final VideoController videoController;
@@ -78,6 +90,7 @@ class PlaybackController extends ValueNotifier<PlaybackValue> {
       ? 'HW+'
       : activeDecoder;
   String? _error;
+  bool _native = false;
   bool _disposed = false;
   final _ready = Completer<void>();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
@@ -186,7 +199,7 @@ class PlaybackController extends ValueNotifier<PlaybackValue> {
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
-    await player.dispose();
+    if (_native) await player.dispose();
     super.dispose();
   }
 }
