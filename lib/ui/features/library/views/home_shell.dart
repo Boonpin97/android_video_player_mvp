@@ -80,7 +80,7 @@ class _HomeShellState extends State<HomeShell> {
                   onTap: () => showAboutDialog(
                     context: context,
                     applicationName: 'Player',
-                    applicationVersion: '1.0.0',
+                    applicationVersion: '1.1.0',
                   ),
                 ),
               ],

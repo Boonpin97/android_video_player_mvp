@@ -226,7 +226,7 @@ class SettingsCategoryPage extends StatelessWidget {
           showLicensePage(
             context: context,
             applicationName: 'Player',
-            applicationVersion: '1.0.0',
+            applicationVersion: '1.1.0',
           );
         }
       case 'version':
@@ -234,7 +234,7 @@ class SettingsCategoryPage extends StatelessWidget {
           showAboutDialog(
             context: context,
             applicationName: 'Player',
-            applicationVersion: '1.0.0',
+            applicationVersion: '1.1.0',
           );
         }
       case 'subtitleFolder':

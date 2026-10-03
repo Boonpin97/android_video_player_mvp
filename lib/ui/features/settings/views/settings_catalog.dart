@@ -512,7 +512,7 @@ const settingsCatalog = <String, List<SettingEntry>>{
   ],
   'Text': [SettingEntry('Subtitle text size', action: 'subtitleSize')],
   'Development': [
-    SettingEntry('Version', subtitle: 'Player · 1.0.0', action: 'version'),
+    SettingEntry('Version', subtitle: 'Player · 1.1.0', action: 'version'),
     SettingEntry('Open source licenses', action: 'licenses'),
   ],
 };
