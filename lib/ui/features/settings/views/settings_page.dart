@@ -163,8 +163,10 @@ class SettingsCategoryPage extends StatelessWidget {
       case 'seekSensitivity':
         await chooseSeekSensitivity(
           context,
-          viewModel.repository.seekSensitivity,
-          viewModel.setSeekSensitivity,
+          sensitivity: viewModel.repository.seekSensitivity,
+          curve: viewModel.repository.seekCurve,
+          onSensitivity: viewModel.setSeekSensitivity,
+          onCurve: viewModel.setSeekCurve,
         );
       case 'subtitleSize':
         final choice = await chooseValue<double>(

@@ -1,13 +1,23 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../data/repositories/media_repository.dart';
+import '../../../../domain/models/library_sort.dart';
 import '../../../../domain/models/media_folder.dart';
 import '../../../../domain/models/media_item.dart';
 
 class LibraryViewModel extends ChangeNotifier {
-  LibraryViewModel(this._mediaRepository);
+  LibraryViewModel(this._mediaRepository, {this.sort = LibrarySort.nameAsc});
 
   final MediaRepository _mediaRepository;
+
+  /// Display order for videos; folders always remain alphabetical.
+  LibrarySort sort;
+
+  void setSort(LibrarySort value) {
+    if (sort == value) return;
+    sort = value;
+    notifyListeners();
+  }
 
   bool isLoading = false;
   bool isDeleting = false;
@@ -88,12 +98,43 @@ class LibraryViewModel extends ChangeNotifier {
 
   List<MediaItem> get filteredItems {
     final trimmed = query.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return items;
+    final matched = trimmed.isEmpty
+        ? items
+        : items.where((item) => item.title.toLowerCase().contains(trimmed));
+    return _sorted(matched);
+  }
+
+  /// Every video of the current folder in display order (player queue order).
+  List<MediaItem> get sortedItems => _sorted(items);
+
+  List<MediaItem> _sorted(Iterable<MediaItem> source) =>
+      source.toList()..sort(_compare);
+
+  /// Name order is case-insensitive to match the MediaStore scan; videos
+  /// without a modification time go last in both date modes.
+  int _compare(MediaItem a, MediaItem b) {
+    int byName(MediaItem x, MediaItem y) {
+      final result = x.title.toLowerCase().compareTo(y.title.toLowerCase());
+      return result != 0 ? result : x.title.compareTo(y.title);
     }
-    return items
-        .where((item) => item.title.toLowerCase().contains(trimmed))
-        .toList(growable: false);
+
+    switch (sort) {
+      case LibrarySort.nameAsc:
+        return byName(a, b);
+      case LibrarySort.nameDesc:
+        return byName(b, a);
+      case LibrarySort.dateNewest:
+      case LibrarySort.dateOldest:
+        final left = a.modifiedAt;
+        final right = b.modifiedAt;
+        if (left == null && right == null) return byName(a, b);
+        if (left == null) return 1;
+        if (right == null) return -1;
+        final result = sort == LibrarySort.dateNewest
+            ? right.compareTo(left)
+            : left.compareTo(right);
+        return result != 0 ? result : byName(a, b);
+    }
   }
 
   Future<void> load() async {

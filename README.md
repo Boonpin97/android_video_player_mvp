@@ -6,6 +6,7 @@ Android video player with a reference-inspired folder library, settings pages, a
 
 - Local and Me tabs, without the Music/Transfer tabs or top shortcut strip.
 - Only main storage folders appear at the root. Open a folder to browse its immediate subfolders and videos. No synthetic Recent folder.
+- Videos inside a folder are ordered with the sort menu at the top right: Name A–Z, Name Z–A, Date newest first, or Date oldest first (file modification date). The choice persists across launches, search results follow it, and the playback queue matches the displayed order. Folders always remain alphabetical.
 - Android MediaStore scanning, runtime media permission requests, search, list/grid layouts, and lazy thumbnails with a bounded cache. Thumbnails sample later scenes instead of frame zero, retry nearly black frames, and use a silent software decoder when Android cannot extract a frame. Two ordinary thumbnails can be extracted concurrently, while software fallbacks use a separate single-worker queue. Generated previews are saved in a bounded disk cache keyed by video modification time, so reopening the app reuses them. Failed cache entries can be retried, and Clear thumbnail cache clears both disk and memory.
 
 ## Playback
@@ -18,7 +19,7 @@ Playback uses media_kit/libmpv, including software decoding for WMV formats that
 
 Select a decoder in the player or save a default under Settings > Decoder. Hardware modes fall back to software when the device cannot decode a format. Information shows the selected and active decoder. These labels describe this app's backend settings.
 
-Drag horizontally to seek forward/backward. Seeking is exponential: short drags nudge by a second or two, and longer drags accelerate (a full-width swipe covers the video length, bounded to 2–10 minutes). Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
+Drag horizontally to seek forward/backward. Seeking is exponential: short drags nudge by a second or two, and longer drags accelerate (a full-width swipe covers the video length, bounded to 2–10 minutes). The acceleration steepness is user-tunable (see Playback adjustments). Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
 
 Settings > Subtitle > Subtitle Folder opens the Android folder picker. The selection persists across launches. Each video automatically loads a same-name SRT directly from that folder (Movie.wmv -> Movie.srt); filename matching also accepts differences in letter case. Missing files leave playback running, and manual subtitle selection still overrides the automatic choice. Clear subtitle folder disables the lookup. Gesture indicators have a transparent background with lightly shadowed text and icons.
 
@@ -40,7 +41,7 @@ flutter test
 flutter build apk --debug
 ```
 
-Tests cover folder hierarchy, loading races, decoder preference persistence, simplified navigation, gesture direction and limits, disposal during media lookup, and reference menu layout in both orientations.
+Tests cover folder hierarchy, loading races, decoder preference persistence, simplified navigation, library sorting and its persistence, gesture direction and limits, seek sensitivity and curve shape, disposal during media lookup, and reference menu layout in both orientations.
 
 Backend references: [media_kit](https://pub.dev/packages/media_kit), [mpv hardware decoding](https://mpv.io/manual/master/#options-hwdec).
 
@@ -51,6 +52,8 @@ The subtitle icon is outlined until an external subtitle track loads successfull
 Audio sync is available from the player toolbar or More menu. It adjusts audio relative to video from -3 to +3 seconds in 0.05-second increments, applies during playback, and remembers the value per video. Negative values make sound earlier; positive values make sound later. Reset returns to zero.
 
 Seek sensitivity is available in the player More menu and Settings > Player > Controls. The 0.25x to 4x slider and +/-0.05x buttons save adjustments immediately. Reset restores 1x. This multiplier affects horizontal drag distance only.
+
+The same dialog tunes the acceleration curve (0.5 to 8, default 4, in 0.25 steps), which controls the avalanche effect of horizontal drag seeking. The seek offset grows as `(e^(k·f) − 1)/(e^k − 1)` over the drag fraction `f` of screen width: lower `k` is near-linear, higher `k` keeps short drags fine and then jumps sharply near the end of the drag. Sensitivity scales how far a swipe reaches; the curve only redistributes where along the drag that distance accumulates, so a full-width swipe covers the same ground for any `k`. Reset restores both defaults, and both settings are saved for all videos.
 
 ## Library selection
 

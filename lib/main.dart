@@ -22,7 +22,10 @@ Future<void> main() async {
 
   runApp(
     VideoPlayerApp(
-      libraryViewModel: LibraryViewModel(mediaRepository),
+      libraryViewModel: LibraryViewModel(
+        mediaRepository,
+        sort: settingsRepository.librarySort,
+      ),
       settingsViewModel: SettingsViewModel(settingsRepository),
       mediaRepository: mediaRepository,
     ),

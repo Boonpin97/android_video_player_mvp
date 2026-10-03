@@ -480,7 +480,8 @@ const settingsCatalog = <String, List<SettingEntry>>{
   'Controls': [
     SettingEntry(
       'Seek drag sensitivity',
-      subtitle: 'Adjust how far horizontal dragging seeks.',
+      subtitle:
+          'Adjust how far horizontal dragging seeks and how sharply longer drags accelerate.',
       action: 'seekSensitivity',
     ),
     SettingEntry(
@@ -511,7 +512,7 @@ const settingsCatalog = <String, List<SettingEntry>>{
   ],
   'Text': [SettingEntry('Subtitle text size', action: 'subtitleSize')],
   'Development': [
-    SettingEntry('Version', subtitle: 'Player Â· 1.0.0', action: 'version'),
+    SettingEntry('Version', subtitle: 'Player · 1.0.0', action: 'version'),
     SettingEntry('Open source licenses', action: 'licenses'),
   ],
 };

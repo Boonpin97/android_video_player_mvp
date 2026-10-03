@@ -1,5 +1,6 @@
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/decoder_mode.dart';
+import '../../domain/models/library_sort.dart';
 import '../services/preference_service.dart';
 import '../services/subtitle_folder_service.dart';
 
@@ -58,6 +59,21 @@ class SettingsRepository {
       _preferenceService.getDouble('ui.seekSensitivity', 1).clamp(0.25, 4);
   Future<void> setSeekSensitivity(double value) =>
       _preferenceService.setDouble('ui.seekSensitivity', value.clamp(0.25, 4));
+
+  /// Steepness `k` of the exponential seek curve. Low values are near-linear;
+  /// high values keep short drags fine and avalanche near the end of the drag.
+  double get seekCurve =>
+      _preferenceService.getDouble('ui.seekCurve', 4).clamp(0.5, 8);
+  Future<void> setSeekCurve(double value) =>
+      _preferenceService.setDouble('ui.seekCurve', value.clamp(0.5, 8));
+
+  LibrarySort get librarySort {
+    final index = _preferenceService.getInt('ui.librarySort', 0);
+    return LibrarySort.values[index.clamp(0, LibrarySort.values.length - 1)];
+  }
+
+  Future<void> setLibrarySort(LibrarySort sort) =>
+      _preferenceService.setInt('ui.librarySort', sort.index);
   double audioDelayFor(String id) =>
       _preferenceService.getDouble('audioDelay.$id', 0).clamp(-3, 3);
   Future<void> setAudioDelay(String id, double seconds) =>

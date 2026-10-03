@@ -205,8 +205,10 @@ class _PlayerPageState extends State<PlayerPage> {
   Future<void> _seekSensitivity() async {
     await chooseSeekSensitivity(
       context,
-      settings.repository.seekSensitivity,
-      settings.setSeekSensitivity,
+      sensitivity: settings.repository.seekSensitivity,
+      curve: settings.repository.seekCurve,
+      onSensitivity: settings.setSeekSensitivity,
+      onCurve: settings.setSeekCurve,
     );
   }
 
@@ -249,6 +251,7 @@ class _PlayerPageState extends State<PlayerPage> {
       brightness: _brightness,
       volume: _volume,
       seekSensitivity: settings.repository.seekSensitivity,
+      seekCurve: settings.repository.seekCurve,
     );
   }
 

@@ -14,22 +14,26 @@ import 'package:android_video_player_mvp/data/repositories/settings_repository.d
 void main() {
   for (final size in [const Size(393, 852), const Size(852, 393)]) {
     testWidgets(
-      'seek sensitivity saves slider changes, nudges and reset at $size',
+      'seek sensitivity and curve save slider changes, nudges and reset at $size',
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = size;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         final values = <double>[];
+        final curves = <double>[];
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: Builder(
                 builder: (context) => TextButton(
-                  onPressed: () =>
-                      chooseSeekSensitivity(context, 1, (value) async {
-                        values.add(value);
-                      }),
+                  onPressed: () => chooseSeekSensitivity(
+                    context,
+                    sensitivity: 1,
+                    curve: 4,
+                    onSensitivity: (value) async => values.add(value),
+                    onCurve: (value) async => curves.add(value),
+                  ),
                   child: const Text('Adjust'),
                 ),
               ),
@@ -39,9 +43,12 @@ void main() {
         await tester.tap(find.text('Adjust'));
         await tester.pumpAndSettle();
         expect(find.text('1.00x'), findsOneWidget);
-        final slider = tester.widget<Slider>(find.byType(Slider));
+        final slider = tester.widget<Slider>(find.byType(Slider).first);
         expect(slider.min, 0.25);
         expect(slider.max, 4);
+        final curveSlider = tester.widget<Slider>(find.byType(Slider).last);
+        expect(curveSlider.min, 0.5);
+        expect(curveSlider.max, 8);
         // Release the slider between the old presets: the precise value must save.
         slider.onChanged!(1.35);
         slider.onChangeEnd!(1.35);
@@ -53,10 +60,27 @@ void main() {
         await tester.tap(find.text('-0.05x'));
         await tester.pumpAndSettle();
         expect(values.last, 1.35);
+        // The curve slider and nudges save the avalanche steepness separately.
+        curveSlider.onChanged!(6.5);
+        curveSlider.onChangeEnd!(6.5);
+        await tester.pumpAndSettle();
+        expect(curves.last, 6.5);
+        await tester.ensureVisible(find.text('+0.25'));
+        await tester.tap(find.text('+0.25'));
+        await tester.pumpAndSettle();
+        expect(curves.last, 6.75);
+        await tester.ensureVisible(find.text('-0.25'));
+        await tester.tap(find.text('-0.25'));
+        await tester.pumpAndSettle();
+        expect(curves.last, 6.5);
+        // Reset restores both defaults: 1x sensitivity and curve 4.
+        await tester.ensureVisible(find.text('Reset'));
         await tester.tap(find.text('Reset'));
         await tester.pumpAndSettle();
         expect(values.last, 1);
+        expect(curves.last, 4);
         expect(tester.takeException(), isNull);
+        await tester.ensureVisible(find.text('Done'));
         await tester.tap(find.text('Done'));
         await tester.pumpAndSettle();
         expect(find.text('Seek drag sensitivity'), findsNothing);
@@ -163,8 +187,35 @@ void main() {
     expect(offsetFor(-250), -offsetFor(250));
   });
 
+  test('seek curve tunes the avalanche without changing full swipes', () {
+    Duration offsetFor(double dx, double curve) {
+      final session = PlaybackGestureSession(
+        origin: Offset.zero,
+        viewport: const Size(1000, 500),
+        position: const Duration(hours: 1),
+        duration: const Duration(hours: 2),
+        brightness: 0.5,
+        volume: 0.5,
+        seekCurve: curve,
+      )..update(Offset(dx, 0));
+      return session.targetPosition - const Duration(hours: 1);
+    }
+
+    // Near-linear at k=0.5: a half-width drag already covers ~44% of the swipe.
+    expect(offsetFor(500, 0.5).inSeconds, closeTo(262, 2));
+    // Avalanche at k=8: the half-width drag stays tiny, then grows sharply.
+    expect(offsetFor(500, 8).inSeconds, lessThan(15));
+    expect(offsetFor(750, 8) > offsetFor(500, 8) * 7, isTrue);
+    // A full-width swipe covers the same distance for any curve.
+    expect(offsetFor(1000, 0.5).inSeconds, 600);
+    expect(offsetFor(1000, 8).inSeconds, 600);
+    // Out-of-range steepness is clamped to 0.5–8.
+    expect(offsetFor(500, 0), offsetFor(500, 0.5));
+    expect(offsetFor(500, 99), offsetFor(500, 8));
+  });
+
   test(
-    'audio delay is bounded per video and sensitivity survives restart',
+    'audio delay is bounded per video and sensitivity and curve survive restart',
     () async {
       SharedPreferences.setMockInitialValues({});
       final preferences = PreferenceService();
@@ -173,6 +224,7 @@ void main() {
       await settings.setAudioDelay('one', 7);
       await settings.setAudioDelay('two', -7);
       await settings.setSeekSensitivity(2);
+      await settings.setSeekCurve(99);
       final freshPreferences = PreferenceService();
       await freshPreferences.init();
       final fresh = SettingsRepository(freshPreferences);
@@ -180,8 +232,10 @@ void main() {
       expect(fresh.audioDelayFor('two'), -3);
       expect(fresh.audioDelayFor('three'), 0);
       expect(fresh.seekSensitivity, 2);
+      expect(fresh.seekCurve, 8);
       await fresh.resetSettings();
       expect(fresh.seekSensitivity, 1);
+      expect(fresh.seekCurve, 4);
       expect(fresh.audioDelayFor('one'), 0);
     },
   );

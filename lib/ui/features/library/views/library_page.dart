@@ -1,3 +1,4 @@
+import '../../../../domain/models/library_sort.dart';
 import '../../../../domain/models/media_preview.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/repositories/media_repository.dart';
@@ -75,7 +76,7 @@ class _LibraryPageState extends State<LibraryPage> {
       MaterialPageRoute<void>(
         builder: (_) => PlayerPage(
           initialItem: item,
-          queue: vm.items,
+          queue: vm.sortedItems,
           settingsViewModel: widget.settingsViewModel,
           mediaRepository: widget.mediaRepository,
         ),
@@ -350,6 +351,43 @@ class _LibraryPageState extends State<LibraryPage> {
                     }
                   }),
                 ),
+                if (!root)
+                  PopupMenuButton<LibrarySort>(
+                    tooltip: 'Sort videos',
+                    icon: const Icon(Icons.swap_vert),
+                    enabled: !vm.isDeleting,
+                    initialValue: vm.sort,
+                    onSelected: (value) {
+                      vm.setSort(value);
+                      widget.settingsViewModel.setLibrarySort(value);
+                    },
+                    itemBuilder: (context) => [
+                      for (final option in LibrarySort.values)
+                        PopupMenuItem(
+                          value: option,
+                          child: Row(
+                            children: [
+                              Icon(
+                                option == vm.sort
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                color: option == vm.sort
+                                    ? AppTheme.blue
+                                    : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  option.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 IconButton(
                   tooltip: vm.gridMode ? 'Use list layout' : 'Use grid layout',
                   icon: Icon(

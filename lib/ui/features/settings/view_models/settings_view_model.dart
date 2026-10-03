@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../data/repositories/settings_repository.dart';
 import '../../../../domain/models/app_settings.dart';
 import '../../../../domain/models/decoder_mode.dart';
+import '../../../../domain/models/library_sort.dart';
 import '../../../../data/services/subtitle_folder_service.dart';
 
 class SettingsViewModel extends ChangeNotifier {
@@ -42,6 +43,16 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> setSeekSensitivity(double value) async {
     await repository.setSeekSensitivity(value);
+    notifyListeners();
+  }
+
+  Future<void> setSeekCurve(double value) async {
+    await repository.setSeekCurve(value);
+    notifyListeners();
+  }
+
+  Future<void> setLibrarySort(LibrarySort sort) async {
+    await repository.setLibrarySort(sort);
     notifyListeners();
   }
 
