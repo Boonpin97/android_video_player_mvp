@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../../../../data/services/device_controls.dart';
 import '../../../../domain/models/decoder_mode.dart';
 import '../view_models/playback_gesture.dart';
+import '../view_models/video_zoom.dart';
 import 'player_seek_bar.dart';
 
 import '../../../../data/repositories/media_repository.dart';
@@ -70,6 +71,11 @@ class _PlayerPageState extends State<PlayerPage> {
   Timer? _gestureTimer;
   Timer? _controlsTimer;
   final Set<int> _activePointers = {};
+  VideoZoom _zoom = VideoZoom.identity;
+  // Set once a touch sequence uses two fingers; single-finger drag gestures
+  // stay off until every finger lifts so a released pinch cannot seek.
+  bool _pinching = false;
+  double _lastPinchScale = 1;
   String _aspect = 'Fit to screen';
   Timer? _sleepTimer;
   DateTime? _lastBack;
@@ -238,13 +244,60 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
-  void _panStart(DragStartDetails details) {
+  void _scaleStart(ScaleStartDetails details) {
+    if (details.pointerCount >= 2 || _pinching) {
+      _pinching = true;
+      _lastPinchScale = 1;
+      _panEnd(cancelled: true);
+      return;
+    }
+    _panStart(details.localFocalPoint);
+  }
+
+  void _scaleUpdate(ScaleUpdateDetails details) {
+    if (!_pinching) {
+      _panUpdate(details.focalPointDelta);
+      return;
+    }
+    if (vm.controlsLocked || _panel != 0 || details.pointerCount < 2) return;
+    final factor = details.scale / _lastPinchScale;
+    _lastPinchScale = details.scale;
+    _gestureTimer?.cancel();
+    setState(() {
+      _zoom = _zoom.update(
+        factor: factor,
+        focal: details.localFocalPoint,
+        focalDelta: details.focalPointDelta,
+        viewport: MediaQuery.sizeOf(context),
+      );
+      _gestureIcon = Icons.zoom_in;
+      _gestureLabel = 'Zoom ${(_zoom.scale * 100).round()}%';
+      _gestureLevel = null;
+    });
+  }
+
+  void _scaleEnd(ScaleEndDetails details) {
+    if (!_pinching) {
+      // A second finger landing also ends the drag phase; never commit a
+      // seek that was interrupted by a pinch.
+      _panEnd(cancelled: details.pointerCount > 0);
+      return;
+    }
+    setState(() => _zoom = _zoom.settle(MediaQuery.sizeOf(context)));
+    _hideGestureLabelSoon();
+  }
+
+  void _resetZoom() {
+    setState(() => _zoom = VideoZoom.identity);
+  }
+
+  void _panStart(Offset origin) {
     if (vm.controlsLocked || _panel != 0 || !vm.isInitialized || vm.isLoading) {
       return;
     }
     _gestureTimer?.cancel();
     _gesture = PlaybackGestureSession(
-      origin: details.localPosition,
+      origin: origin,
       viewport: MediaQuery.sizeOf(context),
       position: vm.controller!.value.position,
       duration: vm.controller!.value.duration,
@@ -255,10 +308,10 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  void _panUpdate(DragUpdateDetails details) {
+  void _panUpdate(Offset delta) {
     final gesture = _gesture;
     if (gesture == null || vm.controlsLocked) return;
-    gesture.update(details.delta);
+    gesture.update(delta);
     switch (gesture.kind) {
       case PlaybackGestureKind.seek:
         final offset = gesture.targetPosition - gesture.position;
@@ -306,6 +359,11 @@ class _PlayerPageState extends State<PlayerPage> {
         gesture?.kind == PlaybackGestureKind.seek) {
       vm.seekTo(gesture!.targetPosition);
     }
+    _hideGestureLabelSoon();
+  }
+
+  void _hideGestureLabelSoon() {
+    _gestureTimer?.cancel();
     _gestureTimer = Timer(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => _gestureLabel = null);
     });
@@ -330,7 +388,12 @@ class _PlayerPageState extends State<PlayerPage> {
       ])
         value: value,
     }, _aspect);
-    if (aspect != null && mounted) setState(() => _aspect = aspect);
+    if (aspect != null && mounted) {
+      setState(() {
+        _aspect = aspect;
+        _zoom = VideoZoom.identity;
+      });
+    }
   }
 
   Future<void> _bookmark() async {
@@ -581,6 +644,12 @@ class _PlayerPageState extends State<PlayerPage> {
         ),
       ),
     );
+    if (!_zoom.isIdentity) {
+      surface = Transform.translate(
+        offset: _zoom.offset,
+        child: Transform.scale(scale: _zoom.scale, child: surface),
+      );
+    }
     if (_mirror || _flip) {
       surface = Transform(
         alignment: Alignment.center,
@@ -658,6 +727,7 @@ class _PlayerPageState extends State<PlayerPage> {
       children: [
         _icon('Aspect ratio', Icons.aspect_ratio, () {
           if (settings.option('quickZoom')) {
+            _resetZoom();
             setState(
               () => _aspect = _aspect == 'Fit to screen'
                   ? 'Crop to fill'
@@ -1173,15 +1243,18 @@ class _PlayerPageState extends State<PlayerPage> {
         body: Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (event) {
+            if (_activePointers.isEmpty) _readDeviceLevels();
             _activePointers.add(event.pointer);
             _controlsTimer?.cancel();
           },
           onPointerUp: (event) {
             _activePointers.remove(event.pointer);
+            if (_activePointers.isEmpty) _pinching = false;
             _resetControlsTimeout();
           },
           onPointerCancel: (event) {
             _activePointers.remove(event.pointer);
+            if (_activePointers.isEmpty) _pinching = false;
             _resetControlsTimeout();
           },
           child: Stack(
@@ -1189,11 +1262,9 @@ class _PlayerPageState extends State<PlayerPage> {
             children: [
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onPanDown: (_) => _readDeviceLevels(),
-                onPanStart: _panStart,
-                onPanUpdate: _panUpdate,
-                onPanEnd: (_) => _panEnd(),
-                onPanCancel: () => _panEnd(cancelled: true),
+                onScaleStart: _scaleStart,
+                onScaleUpdate: _scaleUpdate,
+                onScaleEnd: _scaleEnd,
                 onTap: () {
                   if (_panel != 0) {
                     _closePanel();
@@ -1213,7 +1284,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   }
                 },
                 onDoubleTap: () {},
-                child: _video(),
+                child: ClipRect(child: _video()),
               ),
               if (_gestureLabel != null)
                 IgnorePointer(

@@ -21,6 +21,8 @@ Select a decoder in the player or save a default under Settings > Decoder. Hardw
 
 Drag horizontally to seek forward/backward. Seeking is exponential: short drags nudge by a second or two, and longer drags accelerate (a full-width swipe covers the video length, bounded to 2–10 minutes). The acceleration steepness is user-tunable (see Playback adjustments). Drag vertically on the left half to change window brightness, or on the right half to change media volume. Brightness returns to the system default on leaving playback. A locked player ignores these gestures.
 
+Pinch with two fingers to zoom the video between 50% and 400%; the point under your fingers stays anchored, and moving both fingers pans the zoomed picture without letting it slide past its edges (a zoomed-out picture stays centred). Releasing within 5% of 100% snaps back to the plain fitted picture. A pinch never seeks, and single-finger drags stay disabled until every finger lifts. Changing the aspect ratio resets the zoom. Zoom state is held per player session, not saved.
+
 Settings > Subtitle > Subtitle Folder opens the Android folder picker. The selection persists across launches. Each video automatically loads a same-name SRT directly from that folder (Movie.wmv -> Movie.srt); filename matching also accepts differences in letter case. Missing files leave playback running, and manual subtitle selection still overrides the automatic choice. Clear subtitle folder disables the lookup. Gesture indicators have a transparent background with lightly shadowed text and icons.
 
 When a video finishes, the player automatically continues with the next item of the playing queue; with shuffle a random item is chosen instead. Loop keeps repeating the current video. Ending on the last queue item stays on the final frame, or returns to the list when Settings > Playback > Back to list is enabled. Completion is detected from mpv's end-of-file event, with a fallback for decoders that stop within the last half second without reporting completion.
@@ -41,7 +43,7 @@ flutter test
 flutter build apk --debug
 ```
 
-Tests cover folder hierarchy, loading races, decoder preference persistence, simplified navigation, library sorting and its persistence, gesture direction and limits, seek sensitivity and curve shape, disposal during media lookup, and reference menu layout in both orientations.
+Tests cover folder hierarchy, loading races, decoder preference persistence, simplified navigation, library sorting and its persistence, gesture direction and limits, pinch-zoom anchoring and bounds, seek sensitivity and curve shape, disposal during media lookup, and reference menu layout in both orientations.
 
 Backend references: [media_kit](https://pub.dev/packages/media_kit), [mpv hardware decoding](https://mpv.io/manual/master/#options-hwdec).
 
